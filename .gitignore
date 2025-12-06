@@ -3,3 +3,4 @@ venv
 dataset_dict.json
 dataset_info.json
 state.json
+Word2Vec/__pycache__
