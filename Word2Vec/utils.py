@@ -1,0 +1,2 @@
+EMB_DIM = 32
+RANGE = 2
