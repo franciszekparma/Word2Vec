@@ -1,0 +1,41 @@
+{
+  "builder_name": "json",
+  "citation": "",
+  "config_name": "default",
+  "dataset_name": "flickr30k_captions_quintets",
+  "dataset_size": 10787093,
+  "description": "",
+  "download_checksums": {
+    "hf://datasets/embedding-data/flickr30k_captions_quintets@5bdbcb6537d782d1f3158a67480bcce6a8cfd63d/flickr30k_captions.jsonl.gz": {
+      "num_bytes": 3108522,
+      "checksum": null
+    }
+  },
+  "download_size": 3108522,
+  "features": {
+    "set": {
+      "feature": {
+        "dtype": "string",
+        "_type": "Value"
+      },
+      "_type": "List"
+    }
+  },
+  "homepage": "",
+  "license": "",
+  "size_in_bytes": 13895615,
+  "splits": {
+    "train": {
+      "name": "train",
+      "num_bytes": 10787093,
+      "num_examples": 31783,
+      "dataset_name": "flickr30k_captions_quintets"
+    }
+  },
+  "version": {
+    "version_str": "0.0.0",
+    "major": 0,
+    "minor": 0,
+    "patch": 0
+  }
+}
