@@ -18,7 +18,8 @@ def sample_negatives(vocab, n, context_words, center_word):
   
   neg_vocab.remove(center_word)
   for word in context_words:
-    neg_vocab.remove(word)
+    if word in neg_vocab:
+      neg_vocab.remove(word)
   
   vocab_keys = neg_vocab
   vocab_len = len(vocab_keys)

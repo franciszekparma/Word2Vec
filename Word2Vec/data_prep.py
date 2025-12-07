@@ -32,7 +32,7 @@ def build_data(path="data", show_stats=SHOW_DATA_STATS):
   if LOWER_WORDS:
     vocab = list(set([word.lower() for word in all_words])) #getting only the unique words (no duplicates)
   else:
-    vocab = all_words
+    vocab = list(set(all_words))
 
   if show_stats:
     print(f"Total sentences: {len(all_sentences)}")
@@ -40,6 +40,3 @@ def build_data(path="data", show_stats=SHOW_DATA_STATS):
     print(f"Vocab size: {len(vocab)}")
   
   return vocab, all_sentences, all_words_in_sen
-
-if __name__ =='__main__':
-  build_data()
