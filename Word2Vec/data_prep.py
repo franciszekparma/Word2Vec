@@ -19,7 +19,7 @@ def build_data(path="data", show_stats=SHOW_DATA_STATS):
   all_words_in_sen = []
   all_words = []
   for sentence in all_sentences:
-    sentence = sentence.translate(str.maketrans('', '', string.punctuation)) #romves punctuaction and most of the special characters
+    sentence = sentence.translate(str.maketrans('', '', string.punctuation)) #removes punctuaction and most of the special characters
     words_in_sen = sentence.split()
     if LOWER_WORDS:
       all_words_in_sen.append([word.lower() for word in words_in_sen])  
