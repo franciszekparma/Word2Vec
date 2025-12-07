@@ -47,6 +47,15 @@ def train_model(
         optimizer.zero_grad()
         loss.backward()
         optimizer.step()
-      
+
+    
+    checkpoint = {
+      "epoch": epoch,
+      "embeddings": embds,
+      "optimizer_state_dict": optimizer.state_dict(),
+      "loss": np.mean(np.array(losses)),
+    }
+    torch.save(checkpoint, f"checkpoint_epoch_{epoch}.pt")
+    
     print(f"Epoch: {epoch}")
     print(f"Loss: {np.mean(np.array(losses)):.4f}")
