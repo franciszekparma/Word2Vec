@@ -1,6 +1,6 @@
 # Word2Vec From Scratch
 
-A PyTorch implementation of the Word2Vec Skip-gram model with negative sampling, built entirely from scratch for educational purposes. This project demonstrates the core concepts behind word embeddings without relying on pre-built NLP libraries.
+**A PyTorch implementation of the Word2Vec Skip-gram model with negative sampling, built entirely from scratch for educational purposes. This project demonstrates the core concepts behind word embeddings without relying on pre-built NLP libraries.**
 
 ---
 
