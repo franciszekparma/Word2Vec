@@ -38,4 +38,4 @@ def build_data(path="data", show_stats=SHOW_DATA_STATS):
     print(f"Total words (with duplicates): {len(all_words)}")
     print(f"Vocab size: {len(vocab)}")
   
-  return vocab, all_sentences, all_words_in_sen
+  return vocab, all_words_in_sen
