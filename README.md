@@ -197,28 +197,38 @@ for epoch in tqdm(range(epochs)):
     losses = []
     for w_l, word_list in enumerate(all_words_in_sen):
       for w, word in enumerate(word_list):    
-        y_pos_words = word_list[max(0, w - WINDOW) : w] + word_list[w + 1 : w + WINDOW + 1] #the words that we want the target to be similar to 
+        # Get positive context words within the window (words that should have high similarity)
+        # These are the words surrounding our center word
+        y_pos_words = word_list[max(0, w - WINDOW) : w] + word_list[w + 1 : w + WINDOW + 1]
         if len(y_pos_words) == 0:
           continue
         y_pos_embds = [embds[x] for x in y_pos_words]
-        y_pos_labels = [1 for x in range(len(y_pos_words))]
+        y_pos_labels = [1 for x in range(len(y_pos_words))]  # Label = 1 for positive pairs
         
+        # Sample random negative words (words that should have low similarity)
+        # These are randomly sampled from vocab, excluding context and center words
         y_neg_words = sample_negatives(vocab, n=2*WINDOW, context_words=y_pos_words, center_word=word)
         y_neg_embds = [embds[x] for x in y_neg_words]
-        y_neg_labels = [0 for x in range(len(y_neg_words))]
+        y_neg_labels = [0 for x in range(len(y_neg_words))]  # Label = 0 for negative pairs
         
+        # Combine positive and negative samples
         y_embds = torch.stack(y_pos_embds + y_neg_embds)
         y_labels = torch.tensor(y_pos_labels + y_neg_labels, device=DEVICE, dtype=torch.float32)
       
         center_word = word
-        center_emb = embds[center_word] #the word embedding that we are currently at
+        center_emb = embds[center_word]  # Get embedding for current center word
         
-        
+        # Forward pass: compute dot product similarity scores
+        # model computes: e_center · e_context for each context word
         y_preds = model(center_emb, y_embds)
         
+        # BCE Loss: L = -[y · log(σ(pred)) + (1-y) · log(1 - σ(pred))]
+        # For positive pairs (y=1): minimizes -log(σ(e_center · e_pos)) → pushes similarity UP
+        # For negative pairs (y=0): minimizes -log(1 - σ(e_center · e_neg)) → pushes similarity DOWN
         loss = loss_fn(y_preds, y_labels)
         losses.append(loss.item())
         
+        # Backpropagation: update embeddings to minimize loss
         optimizer.zero_grad()
         loss.backward()
         optimizer.step()
