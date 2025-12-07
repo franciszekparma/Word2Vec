@@ -3,6 +3,7 @@ import random
 
 DEVICE = 'cuda' if torch.cuda.is_available() else 'cpu'
 
+LOWER_WORDS = True
 SHOW_DATA_STATS = False
 
 EMB_DIM = 32
@@ -15,11 +16,11 @@ def sample_negatives(vocab, n, context_words, center_word):
   
   context_words = list(set(context_words))
   
-  neg_vocab.pop(center_word, None)
+  neg_vocab.remove(center_word)
   for word in context_words:
-    neg_vocab.pop(word, None)
+    neg_vocab.remove(word)
   
-  vocab_keys = list(neg_vocab.keys())
+  vocab_keys = neg_vocab
   vocab_len = len(vocab_keys)
   
   negatives = []
