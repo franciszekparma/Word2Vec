@@ -10,7 +10,7 @@ SHOW_DATA_STATS = False
 EMB_DIM = 128
 WINDOW = 4
 
-EPOCHS = 64
+EPOCHS = 32
 
 WORD_A = "hard"
 WORD_B = "work"
