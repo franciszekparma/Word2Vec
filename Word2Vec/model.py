@@ -1,10 +1,11 @@
 import torch
 from torch import nn
 
-from utils import EMB_DIM, DEVICE, EPOCHS
+from utils import EMB_DIM, EPOCHS, DEVICE, SEED
 from data_prep import build_data
 from train import train_model
 
+torch.manual_seed(SEED)
 
 class Word2Vec(nn.Module):
   def __init__(self):
@@ -14,11 +15,12 @@ class Word2Vec(nn.Module):
     return center_emb @ y_embds.T
 
 
+vocab, all_words_in_sen = build_data()
+
+embds = {word: torch.randn((EMB_DIM), device=DEVICE, requires_grad=True) for word in vocab}
+
+
 def main():
-  vocab, all_words_in_sen = build_data()
-  
-  embds = {word: torch.randn((EMB_DIM), device=DEVICE, requires_grad=True) for word in vocab}
-    
   model = Word2Vec().to(DEVICE)
   
   optimizer = torch.optim.AdamW(list(embds.values()), lr=1e-4, weight_decay=5e-3)

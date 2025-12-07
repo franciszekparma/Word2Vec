@@ -14,8 +14,7 @@ def train_model(
   loss_fn,
   epochs
   ):
-  
-  print("\nTraining...")
+  print("Training...")
   
   for epoch in tqdm(range(epochs)):
     

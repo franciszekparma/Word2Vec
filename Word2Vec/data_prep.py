@@ -9,7 +9,7 @@ def build_data(path="data", show_stats=SHOW_DATA_STATS):
     dataset = load_dataset("embedding-data/flickr30k_captions_quintets")
     dataset.save_to_disk(path)
   
-  print(f"Loading data...")  
+  print(f"Loading data...\n")  
   dataset = Dataset.from_file("data/train/data-00000-of-00001.arrow")
 
   all_sentences = []
@@ -32,7 +32,8 @@ def build_data(path="data", show_stats=SHOW_DATA_STATS):
     vocab = list(set([word.lower() for word in all_words])) #getting only the unique words (no duplicates)
   else:
     vocab = list(set(all_words))
-
+  vocab = sorted(vocab) #for reproducibility
+  
   if show_stats:
     print(f"Total sentences: {len(all_sentences)}")
     print(f"Total words (with duplicates): {len(all_words)}")
