@@ -15,21 +15,19 @@ class Word2Vec(nn.Module):
 
 
 def main():
-  vocab, all_sentences, all_words_in_sen = build_data()
+  vocab, all_words_in_sen = build_data()
   
-  target_embds = {word: torch.randn((EMB_DIM), device=DEVICE, requires_grad=True) for word in vocab}
-  contex_embds = {word: torch.randn((EMB_DIM), device=DEVICE, requires_grad=True) for word in vocab}
-  
+  embds = {word: torch.randn((EMB_DIM), device=DEVICE, requires_grad=True) for word in vocab}
+    
   model = Word2Vec().to(DEVICE)
   
-  optimizer = torch.optim.AdamW(list(target_embds.values()) +  list(contex_embds.values()), lr=1e-4, weight_decay=5e-3)
+  optimizer = torch.optim.AdamW(list(embds.values()), lr=1e-4, weight_decay=5e-3)
   loss_fn = nn.BCEWithLogitsLoss()
   
   train_model(
     vocab,
     all_words_in_sen,
-    target_embds,
-    contex_embds,
+    embds,
     model,
     optimizer,
     loss_fn,
