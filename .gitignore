@@ -1,4 +1,4 @@
 venv
 .history
-Word2Vec/__pycache__
+__pycache__
 .gitignore

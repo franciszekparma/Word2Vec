@@ -16,7 +16,7 @@ def train_model(
   epochs
   ):
   
-  print("Training...")
+  print("\nTraining...")
   
   for epoch in tqdm(range(epochs)):
     

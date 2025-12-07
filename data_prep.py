@@ -8,9 +8,8 @@ def build_data(path="data", show_stats=SHOW_DATA_STATS):
   if not os.path.exists(path):
     dataset = load_dataset("embedding-data/flickr30k_captions_quintets")
     dataset.save_to_disk(path)
-  else:
-    print(f"Loading data...")
-    
+  
+  print(f"Loading data...")  
   dataset = Dataset.from_file("data/train/data-00000-of-00001.arrow")
 
   all_sentences = []
