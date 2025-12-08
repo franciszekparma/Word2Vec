@@ -267,14 +267,15 @@ def cosine_sim(emb1, emb2):
 
 ---
 
-## License
-
-MIT License - see [LICENSE](LICENSE)
-
----
-
 ## References
 
 1. Mikolov et al. (2013). [Efficient Estimation of Word Representations in Vector Space](https://arxiv.org/abs/1301.3781)
 2. Mikolov et al. (2013). [Distributed Representations of Words and Phrases](https://arxiv.org/abs/1310.4546)
 3. [Flickr30k Captions Dataset](https://huggingface.co/datasets/embedding-data/flickr30k_captions_quintets)
+---
+
+## License
+
+This project is licensed under the MIT License.  
+© franciszekparma
+
