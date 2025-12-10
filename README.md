@@ -179,8 +179,16 @@ Hyperparameters in `utils.py`:
 | `EMB_DIM` | 128 | 128-300 | Embedding dimensions |
 | `WINDOW` | 5 | 5-10 | Context window size |
 | `EPOCHS` | 32 | 10-50 | Training epochs |
+| `WEIGHT_DECAY` | 1e-2 | 1e-2 | Weight decay |
+|`LR` | 1e-4 | 1e-4 | Learning rate |
 | `SEED` | 24 | - | Random seed |
+| `DEVICE` | auto | cuda | Tensor storage location |
+|`SHOW_DATA_STATS` | False | - | Show stats about data |
 | `LOWER_WORDS` | True | True | Lowercase words |
+| `LOAD_CHECKPOINT` | False | - | Load model checkpoint |
+| `PATH_CHECHPOINT` | "" | - | Path to the checkpoint |
+| `WORD_A` | "hard" | - |  Comparison word A |
+| `WORD_B` | "work" | - |  Comparison word B |
 
 ---
 
