@@ -14,10 +14,10 @@ EPOCHS = 32
 WEIGHT_DECAY = 1e-2
 LR = 1e-4
 
-WORD_A = "cat"
-WORD_B = "dog"
+WORD_A = "man"
+WORD_B = "woman"
 
-TOPK_WORD = "fox"
+TOPK_WORD = "road"
 K = 3
 
 LOAD_CHECKPOINT = False
