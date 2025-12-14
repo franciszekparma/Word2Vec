@@ -188,8 +188,10 @@ Hyperparameters in `utils.py`:
 | `LOWER_WORDS` | True | True | Lowercase words |
 | `LOAD_CHECKPOINT` | False | - | Load model checkpoint |
 | `PATH_CHECHPOINT` | "" | - | Checkpoint file path |
-| `WORD_A` | "hard" | "cat" |  Comparison word A |
-| `WORD_B` | "work" | "dog" |  Comparison word B |
+| `WORD_A` | "man" | "boy" |  Comparison word A |
+| `WORD_B` | "woman" | "girl" |  Comparison word B |
+| `TOPK_WORD` | "road" | "water" | Top k word |
+| `K` | 3 | 5 | K in Top k |
 
 ---
 
