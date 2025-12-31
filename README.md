@@ -1,6 +1,8 @@
-# Word2Vec From Scratch
+# GBPET: GPT with Byte Pair Encoding Tokenizer
 
-A **PyTorch** implementation of the **Word2Vec Skip-gram** model with negative sampling, built entirely **from scratch** for educational purposes. This project demonstrates the core concepts behind **word embeddings** without relying on pre-built NLP libraries.
+A **PyTorch** implementation of a **GPT-style decoder-only transformer** with a custom **Byte Pair Encoding tokenizer**, built entirely **from scratch** for educational purposes. Trained on 15 million characters of Charles Dickens novels.
+
+No HuggingFace. No pretrained weights. No SentencePiece. Just PyTorch and first principles.
 
 ---
 
@@ -17,62 +19,108 @@ A **PyTorch** implementation of the **Word2Vec Skip-gram** model with negative s
 - [Results](#results)
 - [Limitations](#limitations)
 - [Future Improvements](#future-improvements)
-- [License](#license)
 - [References](#references)
+- [License](#license)
 
 ---
 
 ## Overview
 
-Word2Vec is a family of neural network models that learn dense vector representations (embeddings) of words from large corpora of text. These embeddings capture semantic relationships between words, enabling tasks such as analogy completion, similarity measurement, and downstream NLP applications.
+GPT (Generative Pre-trained Transformer) is a decoder-only transformer architecture that generates text autoregressively by predicting the next token given all previous tokens. This implementation demonstrates the core concepts behind modern large language models without relying on pre-built NLP libraries.
 
-This implementation focuses on the **Skip-gram** variant with **negative sampling**, where the model learns to predict context words given a center word while distinguishing true context words from randomly sampled negative examples.
+This project includes:
+
+- **Custom BPE tokenizer** implementing the original algorithm from Sennrich et al. (2016)
+- **Decoder-only transformer** with multi-head self-attention and causal masking
+- **Dual tokenization modes** switchable between BPE (subword) and character-level
+- **Bigram baseline model** for performance comparison
+- **Comprehensive checkpointing** preserving model, optimizer, scheduler, and tokenizer state
 
 ---
 
 ## Architecture
 
-<p align="center">
-  <img src="images/architecture.png" alt="Skip-gram Architecture" width="800"/>
-</p>
+| Parameter | Value |
+|-----------|-------|
+| Total Parameters | ~20M |
+| Embedding Dimension | 512 |
+| Attention Heads | 8 |
+| Transformer Blocks | 8 |
+| Context Length | 256 tokens |
+| Vocabulary Size | 2048 (BPE) / ~88 (char) |
+| Feed-Forward Dimension | 2048 |
+| Dropout | 0.5 |
 
-The model uses a **single shared embedding dictionary** (`embds`) for all words. Both center words and context words are looked up from this same dictionary. The dot product between embeddings measures similarity, and BCE loss trains the model to score positive pairs high and negative pairs low.
+The model uses **Pre-LayerNorm** (GPT-2 style) where normalization is applied before each sub-layer, **learned positional embeddings**, and **GELU activations**.
+
+### Architecture Diagram
+
+```
+Input Token IDs
+       │
+       ▼
+┌──────────────────────────────────────────────────────────────┐
+│  Token Embedding + Positional Embedding                      │
+│  nn.Embedding(2048, 512) + nn.Embedding(256, 512)            │
+└──────────────────────────┬───────────────────────────────────┘
+                           │
+                           ▼
+╔══════════════════════════════════════════════════════════════╗
+║                  TRANSFORMER BLOCK (×8)                      ║
+║                                                              ║
+║    LayerNorm → Multi-Head Attention (8 heads) → + Residual   ║
+║                           │                                  ║
+║    LayerNorm → FeedForward (512→2048→512, GELU) → + Residual ║
+║                                                              ║
+╚══════════════════════════╪═══════════════════════════════════╝
+                           │
+                           ▼
+┌──────────────────────────────────────────────────────────────┐
+│              LayerNorm → Linear Head (512 → 2048)            │
+└──────────────────────────────────────────────────────────────┘
+                           │
+                           ▼
+                     Output Logits
+```
 
 ---
 
 ## Technical Background
 
-### Skip-gram with Negative Sampling
+### Byte Pair Encoding
 
-For each word in the corpus, the model:
+BPE is a subword tokenization algorithm that iteratively merges the most frequent adjacent character pairs:
 
-1. Takes the center word and looks up its embedding from `embds`
-2. Extracts context words within a window and looks up their embeddings
-3. Samples random negative words from the vocabulary
-4. Computes dot product similarity between center and all context/negative embeddings
-5. Uses BCE loss to push positive pairs together and negative pairs apart
-
-### Mathematical Formulation
+1. Initialize vocabulary with all unique characters + `</w>` end-of-word marker
+2. Count frequency of all adjacent token pairs in corpus
+3. Merge most frequent pair into a new token
+4. Repeat until target vocabulary size (2048) is reached
 
 ```
-L = -[y * log(σ(e_center @ e_positive.T)) + (1 - y) * log(1 - σ(e_center @ e_negative.T))]
+Iteration 0:    ['T', 'h', 'e', '</w>', 'c', 'a', 't', '</w>']
+Iteration 50:   ['Th', 'e</w>', 'cat</w>']
+Iteration 1960: 2048 learned subword tokens
 ```
 
-### Implementation
+### Causal Self-Attention
 
-**Embedding Initialization** (`model.py`):
+Each position can only attend to previous positions, enforced by a lower-triangular mask:
+
 ```python
-embds = {word: torch.randn((EMB_DIM), device=DEVICE, requires_grad=True) for word in vocab}
+attn = (q @ k.transpose(-2, -1)) / math.sqrt(head_size)
+attn = attn.masked_fill(self.tril[:T, :T] == 0, float('-inf'))
+attn = F.softmax(attn, dim=-1)
+out = attn @ v
 ```
 
-**Forward Pass** (`model.py`):
+### Autoregressive Generation
+
 ```python
-class Word2Vec(nn.Module):
-    def __init__(self):
-        super().__init__()
-      
-    def forward(self, center_emb, y_embds):
-        return center_emb @ y_embds.T
+for _ in range(max_tokens):
+    logits = model(context[:, -context_len:])
+    probs = F.softmax(logits[:, -1, :], dim=-1)
+    next_token = torch.multinomial(probs, num_samples=1)
+    context = torch.cat([context, next_token], dim=1)
 ```
 
 ---
@@ -80,40 +128,35 @@ class Word2Vec(nn.Module):
 ## Project Structure
 
 ```
-Word2Vec-From-Scratch/
-├── Word2Vec/
-│   ├── model.py        # Model definition and embedding initialization
-│   ├── train.py        # Training loop
-│   ├── data_prep.py    # Data loading and preprocessing
-│   ├── utils.py        # Config and utility functions
-│   ├── check_top_k.py  # Top k nearest words checking
-│   └── check_sim.py    # Word similarity checking
+GBPET/
+├── GBPET/
+│   ├── utils.py            # Hyperparameters and configuration
+│   ├── data_preparation.py # BPE tokenizer and data loading
+│   ├── transformer.py      # Model architecture and training
+│   └── bigram.py           # Baseline model
 ├── data/
-│   └── train/
-│       └── data-00000-of-00001.arrow
-├── checkpoint.md
-├── images/
-├── .gitignore
+│   └── dickens_corpus.txt  # Training corpus (~15M characters)
+├── checkpoints/            # Saved model states
+├── samples/                # Generated text samples
 ├── LICENSE
 └── README.md
 ```
 
 | File | Description |
 |------|-------------|
-| `model.py` | Defines `Word2Vec` class, initializes `embds`, runs training |
-| `train.py` | Training loop with context extraction and negative sampling |
-| `data_prep.py` | Loads Flickr30k, removes punctuation, builds sorted vocabulary |
-| `utils.py` | Hyperparameters and utilities (`sample_negatives`, `euc_dist`, `cosine_sim`) |
-| `check_sim.py` | Computes similarity between `WORD_A` and `WORD_B` |
+| `utils.py` | All hyperparameters, paths, device config, seed utilities |
+| `data_preparation.py` | `BytePairEncoding` class with `train()`, `encode()`, `decode()`, `clean_decode()` |
+| `transformer.py` | `Head`, `MultiHeadAttention`, `FeedForward`, `Block`, `Language_Model` classes |
+| `bigram.py` | Simple next-token baseline for comparison |
 
 ---
 
 ## Installation
 
 ```bash
-git clone https://github.com/franciszekparma/Word2Vec-From-Scratch.git
-cd Word2Vec-From-Scratch
-pip install torch numpy tqdm datasets
+git clone https://github.com/franciszekparma/GBPET.git
+cd GBPET
+pip install torch numpy tqdm
 ```
 
 ### Dependencies
@@ -123,7 +166,6 @@ pip install torch numpy tqdm datasets
 | `torch` | Neural network framework |
 | `numpy` | Numerical operations |
 | `tqdm` | Progress bars |
-| `datasets` | HuggingFace data loading |
 
 ---
 
@@ -132,42 +174,27 @@ pip install torch numpy tqdm datasets
 ### Training
 
 ```bash
-cd Word2Vec
-python model.py
+cd GBPET
+python transformer.py
 ```
 
-### Checking Word Similarity
+### Generate Text Only
 
-Configure words in `utils.py`:
+Set in `utils.py`:
 ```python
-WORD_A = "hard"
-WORD_B = "work"
+ONLY_GENERATE = True
+TRS_LOAD_CHECKPOINT = True
 ```
 
 Then run:
 ```bash
-python check_sim.py
+python transformer.py
 ```
 
-Output:
-```
-Euclidean distance between "hard" and "work": 0.1234
-Cosine Similarity between "hard" and "work": 0.8765
-```
+### Run Baseline
 
-### Accessing Embeddings
-
-```python
-from model import embds
-from utils import cosine_sim, euc_dist
-
-# Get embedding
-vec = embds["dog"]
-
-# Compare words
-emb_a = embds["cat"].unsqueeze(0)
-emb_b = embds["dog"].unsqueeze(0)
-print(f"Cosine similarity: {cosine_sim(emb_a, emb_b):.4f}")
+```bash
+python bigram.py
 ```
 
 ---
@@ -176,118 +203,113 @@ print(f"Cosine similarity: {cosine_sim(emb_a, emb_b):.4f}")
 
 Hyperparameters in `utils.py`:
 
-| Parameter | Default | Recommended | Description |
-|-----------|---------|-------------|-------------|
-| `EMB_DIM` | 128 | 128-300 | Embedding dimensions |
-| `WINDOW` | 5 | 5-10 | Context window size |
-| `EPOCHS` | 32 | 10-50 | Training epochs |
-| `WEIGHT_DECAY` | 1e-2 | 1e-2 | Weight decay |
-|`LR` | 1e-4 | 1e-4 | Learning rate |
-| `SEED` | 24 | - | Random seed |
-| `DEVICE` | auto | cuda | Tensor storage location |
-|`SHOW_DATA_STATS` | False | True | Show stats about data |
-| `LOWER_WORDS` | True | True | Lowercase words |
-| `LOAD_CHECKPOINT` | False | - | Load model checkpoint |
-| `PATH_CHECHPOINT` | "" | - | Checkpoint file path |
-| `WORD_A` | "man" | "boy" |  Comparison word A |
-| `WORD_B` | "woman" | "girl" |  Comparison word B |
-| `TOPK_WORD` | "road" | "water" | Word used in Top K |
-| `K` | 3 | 5 | K used in Top K |
+| Parameter | Default | Description |
+|-----------|---------|-------------|
+| `EMB_DIM` | 512 | Embedding dimensions |
+| `N_HEADS` | 8 | Number of attention heads |
+| `N_BLOCKS` | 8 | Number of transformer blocks |
+| `CONTEXT_LEN` | 256 | Maximum sequence length |
+| `TARGET_VOCAB_SIZE` | 2048 | BPE vocabulary size |
+| `BATCH_SIZE` | 256 | Training batch size |
+| `LR_TRS` | 6e-4 | Peak learning rate |
+| `DP_P` | 0.5 | Dropout probability |
+| `TRS_TRAIN_EPOCHS` | 128 | Number of training epochs |
+| `WARMUP_STEPS` | N_STEPS // 20 | Linear warmup steps |
+| `USE_BYTE_PAIR` | True | Toggle BPE vs character-level |
 
 ---
 
 ## Training Process
 
-<p align="center">
-  <img src="images/training_loss.png" alt="Training Loss" width="700"/>
-</p>
+### Hardware
 
-The training loop (from `train.py`):
+| Tokenization Mode | GPU | Provider |
+|-------------------|-----|----------|
+| BPE (subword) | NVIDIA RTX 5090 | RunPod (rented) |
+| Character-level | NVIDIA RTX 4090 | RunPod (rented) |
 
-```python
-for epoch in tqdm(range(epochs)): 
-    losses = []
-    for w_l, word_list in enumerate(all_words_in_sen):
-      for w, word in enumerate(word_list):    
-        y_pos_words = word_list[max(0, w - WINDOW) : w] + word_list[w + 1 : w + WINDOW + 1] #the words that we want the target to be similar to 
-        if len(y_pos_words) == 0:
-          continue
-        y_pos_embds = [embds[x] for x in y_pos_words]
-        y_pos_labels = [1 for x in range(len(y_pos_words))]
-        
-        y_neg_words = sample_negatives(vocab, n=2*WINDOW, context_words=y_pos_words, center_word=word)
-        y_neg_embds = [embds[x] for x in y_neg_words]
-        y_neg_labels = [0 for x in range(len(y_neg_words))]
-        
-        y_embds = torch.stack(y_pos_embds + y_neg_embds)
-        y_labels = torch.tensor(y_pos_labels + y_neg_labels, device=DEVICE, dtype=torch.float32)
-      
-        center_word = word
-        center_emb = embds[center_word] #the word embedding that we are currently at
-        
-        y_preds = model(center_emb, y_embds)
-        
-        loss = loss_fn(y_preds, y_labels)
-        losses.append(loss.item())
-        
-        optimizer.zero_grad()
-        loss.backward()
-        optimizer.step()
+### Learning Rate Schedule
+
+Linear warmup followed by cosine annealing:
+
 ```
+LR
+ │
+6e-4 ┤       ╭────────────╮
+     │      ╱              ╲
+     │     ╱                ╲
+1e-6 ┤────╱                  ╲────
+     └────┬────────┬─────────┬────→ Steps
+          0    ~1.6k      ~33k
+        Warmup   Cosine Decay
+```
+
+### Training Time
+
+| Component | Duration |
+|-----------|----------|
+| BPE vocabulary training | ~3-4 hours (one-time, cached) |
+| Model training per epoch | ~100-120 seconds |
+| Full training run | ~3-4 hours |
 
 ---
 
 ## Results
 
-<p align="center">
-  <img src="images/embeddings.png" alt="t-SNE Visualization" width="800"/>
-</p>
+### Sample Output
 
-With sufficient training (EMB_DIM=128+, EPOCHS=20+), semantically similar words cluster together in embedding space.
+> **TODO**: Add generated samples from trained model
 
-### Similarity Functions
-
-```python
-def euc_dist(emb1, emb2):
-    return ((torch.sum((emb1 - emb2)**2))**0.5).item()
-
-def cosine_sim(emb1, emb2):
-    return ((emb1 @ emb2.T) / (torch.norm(emb1) * torch.norm(emb2))).item()
+```bash
+# Generate with:
+# Set ONLY_GENERATE=True in utils.py
+python transformer.py
 ```
+
+### Loss Metrics
+
+| Metric | BPE Model |
+|--------|-----------|
+| Final Train Loss | ~2.5 |
+| Final Val Loss | ~3.3 |
 
 ---
 
 ## Limitations
 
-| Limitation | Solution |
-|------------|----------|
-| Uniform negative sampling | Frequency-based sampling (f^0.75) |
-| No subsampling | Probabilistic downsampling |
-| Dictionary storage | `nn.Embedding` layer |
-| Sequential training | Mini-batching |
+| Limitation | Description |
+|------------|-------------|
+| BPE training time | Standard algorithm is O(n × vocab_size), takes hours |
+| Fixed context | 256 tokens maximum, no sliding window |
+| Single domain | Trained only on Dickens, limited generalization |
+| Basic sampling | Temperature only, no top-p/nucleus sampling |
+| O(n²) attention | Memory scales quadratically with sequence length |
 
 ---
 
 ## Future Improvements
 
-- [ ] Frequency-based negative sampling
-- [ ] Subsampling frequent words
-- [ ] Batch processing
-- [ ] `nn.Embedding` layer
-- [ ] Evaluation benchmarks (SimLex-999)
-- [ ] CBOW variant
+- [ ] Optimize BPE with word frequency method
+- [ ] Implement Flash Attention for longer contexts
+- [ ] Add top-p (nucleus) sampling
+- [ ] Implement KV-cache for faster inference
+- [ ] Add Rotary Positional Embeddings (RoPE)
+- [ ] Multi-corpus training (other Victorian authors)
 
 ---
 
 ## References
 
-1. Mikolov et al. (2013). [Efficient Estimation of Word Representations in Vector Space](https://arxiv.org/abs/1301.3781)
-2. Mikolov et al. (2013). [Distributed Representations of Words and Phrases](https://arxiv.org/abs/1310.4546)
-3. [Flickr30k Captions Dataset](https://huggingface.co/datasets/embedding-data/flickr30k_captions_quintets)
+1. Vaswani et al. (2017). [Attention Is All You Need](https://arxiv.org/abs/1706.03762)
+2. Radford et al. (2018). [Improving Language Understanding by Generative Pre-Training](https://cdn.openai.com/research-covers/language-unsupervised/language_understanding_paper.pdf)
+3. Radford et al. (2019). [Language Models are Unsupervised Multitask Learners](https://cdn.openai.com/better-language-models/language_models_are_unsupervised_multitask_learners.pdf)
+4. Sennrich et al. (2016). [Neural Machine Translation of Rare Words with Subword Units](https://arxiv.org/abs/1508.07909)
+5. Karpathy, A. [minGPT](https://github.com/karpathy/minGPT)
+
 ---
 
 ## License
 
-This project is licensed under the MIT License.  
-© franciszekparma
+This project is licensed under the MIT License.
 
+© 2025 franciszekparma
